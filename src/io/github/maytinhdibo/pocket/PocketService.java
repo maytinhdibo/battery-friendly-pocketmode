@@ -1,0 +1,141 @@
+/*
+ * MIT License
+ *
+ * Copyright (c) 2021 Trần Mạnh Cường <maytinhdibo>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+package io.github.maytinhdibo.pocket;
+
+import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.os.IBinder;
+import android.os.PowerManager;
+import android.os.SystemClock;
+import android.util.Log;
+
+public class PocketService extends Service {
+    private static final String TAG = "PocketMode";
+    private static final boolean DEBUG = true;
+
+    SensorManager sensorManager;
+    Sensor proximitySensor;
+    Context mContext;
+
+    private long lastBlock = -1;
+    private boolean isFirstChange = false;
+
+    @Override
+    public void onCreate() {
+        if (DEBUG) Log.d(TAG, "Creating service");
+        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        proximitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
+
+        mContext = this;
+
+        IntentFilter screenStateFilter = new IntentFilter();
+        screenStateFilter.addAction(Intent.ACTION_SCREEN_ON);
+        screenStateFilter.addAction(Intent.ACTION_SCREEN_OFF);
+        screenStateFilter.addAction(Intent.ACTION_USER_PRESENT);
+        registerReceiver(mScreenStateReceiver, screenStateFilter);
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        if (DEBUG) Log.d(TAG, "Starting service");
+        return START_STICKY;
+    }
+
+    @Override
+    public void onDestroy() {
+        if (DEBUG) Log.d(TAG, "Destroying service");
+        super.onDestroy();
+        this.unregisterReceiver(mScreenStateReceiver);
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
+
+    private void disableSensor() {
+        if (DEBUG) Log.d(TAG, "Disable proximity sensor");
+        sensorManager.unregisterListener(proximitySensorEventListener, proximitySensor);
+        //mark first sensor update after disable
+        isFirstChange = true;
+    }
+
+    private void enableSensor() {
+        if (DEBUG) Log.d(TAG, "Enable proximity sensor");
+        sensorManager.registerListener(proximitySensorEventListener,
+                proximitySensor,
+                SensorManager.SENSOR_DELAY_NORMAL);
+    }
+
+    private BroadcastReceiver mScreenStateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)) {
+                enableSensor();
+            } else if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
+                disableSensor();
+            } else if (intent.getAction().equals(Intent.ACTION_USER_PRESENT)) {
+                //disable when unlocked
+                disableSensor();
+            }
+        }
+    };
+
+    SensorEventListener proximitySensorEventListener = new SensorEventListener() {
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int accuracy) {
+            //method to check accuracy changed in sensor.
+        }
+
+        @Override
+        public void onSensorChanged(SensorEvent event) {
+            //check if the sensor type is proximity sensor.
+            if (event.sensor.getType() == Sensor.TYPE_PROXIMITY) {
+                if (event.values[0] == 0) {
+                    //stop block turn on after 15 seconds
+                    if (!(isFirstChange && (System.currentTimeMillis() - lastBlock < 15000 && lastBlock != -1))) {
+                        if (DEBUG) Log.d(TAG, "NEAR, disable sensor and turn screen off");
+                        disableSensor();
+                        PowerManager pm = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
+                        if (pm != null) {
+                            pm.goToSleep(SystemClock.uptimeMillis());
+                            lastBlock = System.currentTimeMillis();
+                        }
+                    }
+                } else {
+                    if (DEBUG) Log.d(TAG, "FAR");
+                }
+            }
+            isFirstChange = false;
+        }
+    };
+}
