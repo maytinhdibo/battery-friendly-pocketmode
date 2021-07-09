@@ -34,12 +34,14 @@ public class PocketUtils {
     private static Intent service = null;
 
     public static void startService(Context context) {
-        Log.d(TAG, "Starting service");
-        try {
-            context.startServiceAsUser(new Intent(context, PocketService.class),
-                    UserHandle.CURRENT);
-        } catch (Exception e) {
-            Log.d(TAG, e.getStackTrace().toString());
+        if (service == null) {
+            Log.d(TAG, "Starting service");
+            try {
+                context.startServiceAsUser(new Intent(context, PocketService.class),
+                        UserHandle.CURRENT);
+            } catch (Exception e) {
+                Log.d(TAG, e.getStackTrace().toString());
+            }
         }
     }
 
@@ -48,6 +50,7 @@ public class PocketUtils {
         if (service != null) {
             try {
                 context.stopService(service);
+                service = null;
             } catch (Exception e) {
                 Log.d(TAG, e.getStackTrace().toString());
             }
