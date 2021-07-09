@@ -26,34 +26,25 @@ package io.github.maytinhdibo.pocket;
 
 import android.content.Context;
 import android.content.Intent;
-import android.os.UserHandle;
 import android.util.Log;
 
 public class PocketUtils {
     private static final String TAG = "PocketMode";
-    private static Intent service = null;
 
     public static void startService(Context context) {
-        if (service == null) {
-            Log.d(TAG, "Starting service");
-            try {
-                context.startServiceAsUser(new Intent(context, PocketService.class),
-                        UserHandle.CURRENT);
-            } catch (Exception e) {
-                Log.d(TAG, e.getStackTrace().toString());
-            }
+        try {
+            context.startService(new Intent(context, PocketService.class));
+        } catch (Exception e) {
+            Log.d(TAG, e.getStackTrace().toString());
         }
+
     }
 
     public static void stopService(Context context) {
-        Log.d(TAG, "Stopping service");
-        if (service != null) {
-            try {
-                context.stopService(service);
-                service = null;
-            } catch (Exception e) {
-                Log.d(TAG, e.getStackTrace().toString());
-            }
+        try {
+            context.stopService(new Intent(context, PocketService.class));
+        } catch (Exception e) {
+            Log.d(TAG, e.getStackTrace().toString());
         }
     }
 }

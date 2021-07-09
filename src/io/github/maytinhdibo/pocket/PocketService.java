@@ -73,8 +73,8 @@ public class PocketService extends Service {
     @Override
     public void onDestroy() {
         if (DEBUG) Log.d(TAG, "Destroying service");
-        super.onDestroy();
         this.unregisterReceiver(mScreenStateReceiver);
+        super.onDestroy();
     }
 
     @Override
