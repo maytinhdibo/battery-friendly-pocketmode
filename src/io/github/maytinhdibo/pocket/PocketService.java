@@ -42,6 +42,13 @@ public class PocketService extends Service {
     private static final String TAG = "PocketMode";
     private static final boolean DEBUG = true;
 
+    private static final int EVENT_UNLOCK = 2;
+    private static final int EVENT_TURN_ON_SCREEN = 1;
+    private static final int EVENT_TURN_OFF_SCREEN = 0;
+
+    private int lastAction = -1;
+    private boolean isSensorRunning = false;
+
     SensorManager sensorManager;
     Sensor proximitySensor;
     Context mContext;
@@ -83,10 +90,12 @@ public class PocketService extends Service {
     }
 
     private void disableSensor() {
+        if (!isSensorRunning) return;
         if (DEBUG) Log.d(TAG, "Disable proximity sensor");
         sensorManager.unregisterListener(proximitySensorEventListener, proximitySensor);
         //mark first sensor update after disable
         isFirstChange = true;
+        isSensorRunning = false;
     }
 
     private void enableSensor() {
@@ -94,18 +103,22 @@ public class PocketService extends Service {
         sensorManager.registerListener(proximitySensorEventListener,
                 proximitySensor,
                 SensorManager.SENSOR_DELAY_NORMAL);
+        isSensorRunning = true;
     }
 
     private BroadcastReceiver mScreenStateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)) {
-                enableSensor();
+                if (lastAction != EVENT_UNLOCK) enableSensor();
+                lastAction = EVENT_TURN_ON_SCREEN;
             } else if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
                 disableSensor();
+                lastAction = EVENT_TURN_OFF_SCREEN;
             } else if (intent.getAction().equals(Intent.ACTION_USER_PRESENT)) {
                 //disable when unlocked
                 disableSensor();
+                lastAction = EVENT_UNLOCK;
             }
         }
     };
