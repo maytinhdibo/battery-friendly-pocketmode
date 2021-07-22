@@ -27,5 +27,6 @@
     <privapp-permissions package="io.github.maytinhdibo.pocket">
         <permission name="android.permission.WRITE_SECURE_SETTINGS"/>
         <permission name="android.permission.INTERACT_ACROSS_USERS"/>
+        <permission name="android.permission.READ_PHONE_STATE" />
     </privapp-permissions>
 </permissions> 

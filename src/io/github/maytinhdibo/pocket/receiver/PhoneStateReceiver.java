@@ -22,24 +22,32 @@
  * SOFTWARE.
  */
 
-package io.github.maytinhdibo.pocket;
+package io.github.maytinhdibo.pocket.receiver;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.telephony.TelephonyManager;
+import android.util.Log;
 
-
-public class BootCompletedReceiver extends BroadcastReceiver {
+public class PhoneStateReceiver extends BroadcastReceiver {
 
     private static final String TAG = "PocketMode";
+    public final static int IN_CALL = 1; //while ringing or calling
+    public final static int IDLE = 0;
+
+    public static int CUR_STATE = IDLE;
 
     @Override
     public void onReceive(final Context context, Intent intent) {
-        if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
-            //just check on boot
-            boolean isEnable = context.getSharedPreferences(PocketPreferenceFragment.BATTERY_POCKET_MODE, Context.MODE_PRIVATE)
-                    .getBoolean("enable", false);
-            if (isEnable) PocketUtils.startService(context);
+        String state = intent.getStringExtra(TelephonyManager.EXTRA_STATE);
+        Log.d(TAG, state);
+
+        if (state.equals(TelephonyManager.EXTRA_STATE_RINGING)
+                || state.equals(TelephonyManager.EXTRA_STATE_OFFHOOK)) {
+            CUR_STATE = PhoneStateReceiver.IN_CALL;
+        } else if (state.equals(TelephonyManager.EXTRA_STATE_IDLE)) {
+            CUR_STATE = PhoneStateReceiver.IDLE;
         }
     }
 }
