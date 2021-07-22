@@ -28,6 +28,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
+import io.github.maytinhdibo.PocketUtils;
+import io.github.maytinhdibo.PocketPreferenceFragment;
 
 public class BootCompletedReceiver extends BroadcastReceiver {
 

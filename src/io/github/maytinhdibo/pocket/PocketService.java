@@ -38,6 +38,8 @@ import android.os.PowerManager;
 import android.os.SystemClock;
 import android.util.Log;
 
+import io.github.maytinhdibo.pocket.receiver.PhoneStateReceiver;
+
 public class PocketService extends Service {
     private static final String TAG = "PocketMode";
     private static final boolean DEBUG = true;
