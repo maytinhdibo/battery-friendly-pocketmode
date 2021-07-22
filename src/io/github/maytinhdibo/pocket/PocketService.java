@@ -24,6 +24,7 @@
 
 package io.github.maytinhdibo.pocket;
 
+import android.app.AlarmManager;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -49,6 +50,7 @@ public class PocketService extends Service {
     private static final int EVENT_TURN_OFF_SCREEN = 0;
 
     private int lastAction = -1;
+    private static long nextAlarm = -1;
     private boolean isSensorRunning = false;
 
     SensorManager sensorManager;
@@ -116,6 +118,13 @@ public class PocketService extends Service {
                 lastAction = EVENT_TURN_ON_SCREEN;
             } else if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
                 disableSensor();
+
+                //save alarm after turn off screen
+                AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
+                AlarmManager.AlarmClockInfo alarmClockInfo = alarmManager.getNextAlarmClock();
+                if (alarmClockInfo != null) nextAlarm = alarmClockInfo.getTriggerTime();
+                else nextAlarm = -1;
+
                 lastAction = EVENT_TURN_OFF_SCREEN;
             } else if (intent.getAction().equals(Intent.ACTION_USER_PRESENT)) {
                 //disable when unlocked
@@ -136,7 +145,9 @@ public class PocketService extends Service {
             //check if the sensor type is proximity sensor.
             if (event.sensor.getType() == Sensor.TYPE_PROXIMITY) {
                 if (event.values[0] == 0) {
-                    if(PhoneStateReceiver.CUR_STATE == PhoneStateReceiver.IDLE){
+                    long timestamp = System.currentTimeMillis();
+                    if (PhoneStateReceiver.CUR_STATE == PhoneStateReceiver.IDLE
+                            && (nextAlarm == -1 || timestamp - nextAlarm > 60000)) {
                         //stop block turn on after 15 seconds
                         if (!(isFirstChange && (System.currentTimeMillis() - lastBlock < 15000 && lastBlock != -1))) {
                             if (DEBUG) Log.d(TAG, "NEAR, disable sensor and turn screen off");
